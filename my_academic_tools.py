@@ -5,10 +5,10 @@ from fastapi import FastAPI
 import uvicorn
 
 # --- CORRECTED IMPORTS (v4 - Confirmed) ---
-# Import the specific classes we need from their submodules
 from google.adk import agents
 from google.adk.agents import BaseAgent
-from google.adk.tools import Tool
+# Use FunctionTool, which is the correct class for this
+from google.adk.tools import FunctionTool
 # ------------------------------------------
 
 # Tool function to extract text from a PDF file
@@ -65,14 +65,15 @@ def compile_latex_to_pdf(file_path: str) -> str:
         return f"An unexpected error occurred: {e}"
 
 
-# Wrap the functions into Tool objects
-pdf_tool = Tool(
+# --- CORRECTED TOOL DEFINITION ---
+# Wrap the functions into FunctionTool objects
+pdf_tool = FunctionTool(
     name="extract_pdf_text",
     description="Extracts all text from a given PDF file.",
     fn=extract_pdf_text,
 )
 
-latex_tool = Tool(
+latex_tool = FunctionTool(
     name="compile_latex_to_pdf",
     description="Compiles a .tex file into a PDF using the pdflatex engine.",
     fn=compile_latex_to_pdf,
@@ -87,7 +88,6 @@ class AcademicAgent(BaseAgent):
 app = FastAPI()
 
 # Mount the AcademicAgent to the app
-# This uses the 'agents' module we imported
 agents.mount_agent_to_app(AcademicAgent, app, path="/mcp")
 
 # Main block to run the server
