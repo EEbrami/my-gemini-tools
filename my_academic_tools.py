@@ -1,9 +1,10 @@
 import subprocess
 import os
 import fitz  # from PyMuPDF
-import google.adk
 from fastapi import FastAPI
 import uvicorn
+from google.adk import BaseAgent, agents
+from google.adk.tools import Tool  # <--- FIX 1: Correct import
 
 # Tool function to extract text from a PDF file
 def extract_pdf_text(file_path: str) -> str:
@@ -58,21 +59,23 @@ def compile_latex_to_pdf(file_path: str) -> str:
     except Exception as e:
         return f"An unexpected error occurred: {e}"
 
-# Wrap the functions into google.adk.Tool objects
-pdf_tool = google.adk.Tool(
+# --- CORRECTED CODE ---
+
+# Wrap the functions into Tool objects
+pdf_tool = Tool(  # <--- FIX 2: Removed 'google.adk.'
     name="extract_pdf_text",
     description="Extracts all text from a given PDF file.",
-    func=extract_pdf_text,
+    fn=extract_pdf_text,  # <--- FIX 3: Changed 'func' to 'fn'
 )
 
-latex_tool = google.adk.Tool(
+latex_tool = Tool(  # <--- FIX 2: Removed 'google.adk.'
     name="compile_latex_to_pdf",
     description="Compiles a .tex file into a PDF using the pdflatex engine.",
-    func=compile_latex_to_pdf,
+    fn=compile_latex_to_pdf, # <--- FIX 3: Changed 'func' to 'fn'
 )
 
 # Define a BaseAgent that includes the tools
-class AcademicAgent(google.adk.BaseAgent):
+class AcademicAgent(BaseAgent):  # <--- FIX 2: Removed 'google.adk.'
     def __init__(self):
         super().__init__(tools=[pdf_tool, latex_tool])
 
@@ -80,7 +83,7 @@ class AcademicAgent(google.adk.BaseAgent):
 app = FastAPI()
 
 # Mount the AcademicAgent to the app
-google.adk.agents.mount_agent_to_app(AcademicAgent, app, path="/mcp")
+agents.mount_agent_to_app(AcademicAgent, app, path="/mcp") # <--- FIX 2: Removed 'google.adk.'
 
 # Main block to run the server
 if __name__ == "__main__":
