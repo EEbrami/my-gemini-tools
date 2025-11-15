@@ -4,12 +4,12 @@ import fitz  # from PyMuPDF
 from fastapi import FastAPI
 import uvicorn
 
-# --- CORRECTED IMPORTS ---
+# --- CORRECTED IMPORTS (v4 - Confirmed) ---
 # Import the specific classes we need from their submodules
 from google.adk import agents
 from google.adk.agents import BaseAgent
 from google.adk.tools import Tool
-# -------------------------
+# ------------------------------------------
 
 # Tool function to extract text from a PDF file
 def extract_pdf_text(file_path: str) -> str:
