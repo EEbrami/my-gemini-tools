@@ -2,10 +2,11 @@ import subprocess
 import os
 import fitz  # from PyMuPDF
 
-# --- CORRECTED IMPORTS ---
-from google.adk.agents import BaseAgent
+# --- CORRECTED IMPORTS (v6) ---
+# Import the concrete 'Agent' class, not the 'BaseAgent' abstract class
+from google.adk.agents import Agent
 from google.adk.tools import FunctionTool
-# -------------------------
+# ------------------------------
 
 # Tool function to extract text from a PDF file
 def extract_pdf_text(file_path: str) -> str:
@@ -62,10 +63,15 @@ def compile_latex_to_pdf(file_path: str) -> str:
 
 
 # --- CORRECTED TOOL DEFINITION ---
-# The FunctionTool constructor only takes the function itself.
+# This is confirmed correct by your 'function_tool.py' file.
 pdf_tool = FunctionTool(func=extract_pdf_text)
 latex_tool = FunctionTool(func=compile_latex_to_pdf)
 
 # --- CORRECTED AGENT DEFINITION ---
-# This is the variable the 'adk' command looks for.
-root_agent = BaseAgent(tools=[pdf_tool, latex_tool])
+# 1. Use 'Agent' class instead of 'BaseAgent'.
+# 2. Provide the 'name' argument, which the error log required.
+# 3. The 'Agent' class *does* accept the 'tools' argument.
+root_agent = Agent(
+    name="academic_tool_agent", 
+    tools=[pdf_tool, latex_tool]
+)
