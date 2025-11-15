@@ -20,3 +20,8 @@ The workflow can extract descriptions from:
 ### Usage
 
 Simply commit your Gemini CLI tool file to this repository. The workflow will run on push to main/master and update the README automatically.
+## Files
+
+- `my_academic_tools.py`: Extracts all text from a given PDF file.
+- `render.yaml`: YAML configuration file
+- `requirements.txt`: Text file
