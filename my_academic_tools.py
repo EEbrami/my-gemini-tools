@@ -4,12 +4,11 @@ import fitz  # from PyMuPDF
 from fastapi import FastAPI
 import uvicorn
 
-# --- CORRECTED IMPORTS (v4 - Confirmed) ---
+# --- CORRECTED IMPORTS (Confirmed) ---
 from google.adk import agents
 from google.adk.agents import BaseAgent
-# Use FunctionTool, which is the correct class for this
 from google.adk.tools import FunctionTool
-# ------------------------------------------
+# -----------------------------------
 
 # Tool function to extract text from a PDF file
 def extract_pdf_text(file_path: str) -> str:
@@ -65,19 +64,12 @@ def compile_latex_to_pdf(file_path: str) -> str:
         return f"An unexpected error occurred: {e}"
 
 
-# --- CORRECTED TOOL DEFINITION ---
-# Wrap the functions into FunctionTool objects
-pdf_tool = FunctionTool(
-    name="extract_pdf_text",
-    description="Extracts all text from a given PDF file.",
-    fn=extract_pdf_text,
-)
-
-latex_tool = FunctionTool(
-    name="compile_latex_to_pdf",
-    description="Compiles a .tex file into a PDF using the pdflatex engine.",
-    fn=compile_latex_to_pdf,
-)
+# --- CORRECTED TOOL DEFINITION (v5) ---
+# The FunctionTool constructor only takes the function itself.
+# It automatically uses the function's name and docstring.
+pdf_tool = FunctionTool(func=extract_pdf_text)
+latex_tool = FunctionTool(func=compile_latex_to_pdf)
+# ------------------------------------
 
 # Define a BaseAgent that includes the tools
 class AcademicAgent(BaseAgent):
