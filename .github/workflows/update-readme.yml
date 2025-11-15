@@ -1,0 +1,166 @@
+name: Update README with File Descriptions
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - 'README.md'
+      - '.github/**'
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get list of files changed in the last commit
+          if [ "$(git rev-list --count HEAD)" -eq 1 ]; then
+            # First commit - list all files
+            FILES=$(git ls-tree --name-only -r HEAD | grep -v '^\.github/' | grep -v '^README\.md$' || true)
+          else
+            # Get files from last commit
+            FILES=$(git diff --name-only HEAD~1 HEAD | grep -v '^\.github/' | grep -v '^README\.md$' || true)
+          fi
+          
+          if [ -z "$FILES" ]; then
+            echo "No new files to process"
+            echo "has_files=false" >> $GITHUB_OUTPUT
+          else
+            echo "Files to process:"
+            echo "$FILES"
+            echo "$FILES" > /tmp/changed_files.txt
+            echo "has_files=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate file descriptions and update README
+        if: steps.changed-files.outputs.has_files == 'true'
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os
+          import re
+          
+          def get_file_description(filepath):
+              """Generate a short description for a file based on its content and name."""
+              try:
+                  with open(filepath, 'r', encoding='utf-8') as f:
+                      content = f.read()
+                  
+                  # Try to find a description in common comment formats
+                  # Python style
+                  python_match = re.search(r'"""(.+?)"""', content, re.DOTALL)
+                  if python_match:
+                      desc = python_match.group(1).strip().split('\n')[0]
+                      return desc[:100] + '...' if len(desc) > 100 else desc
+                  
+                  # JavaScript/C style
+                  js_match = re.search(r'/\*\*?\s*\n?\s*\*?\s*(.+?)\n', content)
+                  if js_match:
+                      desc = js_match.group(1).strip()
+                      return desc[:100] + '...' if len(desc) > 100 else desc
+                  
+                  # Shell/Python single-line comment at the start
+                  comment_match = re.search(r'^#\s*(.+?)$', content, re.MULTILINE)
+                  if comment_match:
+                      desc = comment_match.group(1).strip()
+                      return desc[:100] + '...' if len(desc) > 100 else desc
+                  
+                  # JavaScript single-line comment at the start
+                  js_comment_match = re.search(r'^//\s*(.+?)$', content, re.MULTILINE)
+                  if js_comment_match:
+                      desc = js_comment_match.group(1).strip()
+                      return desc[:100] + '...' if len(desc) > 100 else desc
+                  
+                  # Default description based on file extension
+                  ext = os.path.splitext(filepath)[1].lower()
+                  ext_descriptions = {
+                      '.py': 'Python script',
+                      '.js': 'JavaScript file',
+                      '.sh': 'Shell script',
+                      '.json': 'JSON configuration file',
+                      '.yaml': 'YAML configuration file',
+                      '.yml': 'YAML configuration file',
+                      '.txt': 'Text file',
+                      '.md': 'Markdown file',
+                  }
+                  return ext_descriptions.get(ext, 'File')
+              except Exception as e:
+                  return f"File (error reading: {str(e)[:30]})"
+          
+          # Read the list of changed files
+          with open('/tmp/changed_files.txt', 'r') as f:
+              changed_files = [line.strip() for line in f if line.strip()]
+          
+          # Read current README
+          readme_path = 'README.md'
+          if os.path.exists(readme_path):
+              with open(readme_path, 'r') as f:
+                  readme_content = f.read()
+          else:
+              readme_content = "# my-gemini-tools\n"
+          
+          # Check if we have a Files section
+          if "## Files" not in readme_content:
+              readme_content += "\n## Files\n\n"
+          
+          # Split README into parts
+          parts = readme_content.split("## Files")
+          header = parts[0]
+          
+          # Parse existing file entries
+          existing_files = {}
+          if len(parts) > 1:
+              files_section = parts[1]
+              for line in files_section.split('\n'):
+                  match = re.match(r'-\s+`([^`]+)`:\s+(.+)', line)
+                  if match:
+                      existing_files[match.group(1)] = match.group(2)
+          
+          # Add new files
+          for filepath in changed_files:
+              if os.path.exists(filepath) and filepath not in existing_files:
+                  desc = get_file_description(filepath)
+                  existing_files[filepath] = desc
+          
+          # Rebuild Files section
+          files_section = "## Files\n\n"
+          for filepath in sorted(existing_files.keys()):
+              files_section += f"- `{filepath}`: {existing_files[filepath]}\n"
+          
+          # Write updated README
+          new_readme = header + files_section
+          with open(readme_path, 'w') as f:
+              f.write(new_readme)
+          
+          print("README.md updated successfully")
+          PYTHON_SCRIPT
+      
+      - name: Commit changes
+        if: steps.changed-files.outputs.has_files == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if git diff --quiet README.md; then
+            echo "No changes to commit"
+          else
+            git add README.md
+            git commit -m "Auto-update README.md with file descriptions"
+            git push
+          fi
