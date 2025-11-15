@@ -4,11 +4,12 @@ import fitz  # from PyMuPDF
 from fastapi import FastAPI
 import uvicorn
 
-# --- CORRECTED IMPORTS (Confirmed) ---
-from google.adk import agents
+# --- CORRECTED IMPORTS (v5 - Confirmed) ---
 from google.adk.agents import BaseAgent
 from google.adk.tools import FunctionTool
-# -----------------------------------
+# This is the correct location for the server mounting function
+from google.adk.cli.fast_api import mount_agent_to_app
+# ------------------------------------------
 
 # Tool function to extract text from a PDF file
 def extract_pdf_text(file_path: str) -> str:
@@ -64,12 +65,10 @@ def compile_latex_to_pdf(file_path: str) -> str:
         return f"An unexpected error occurred: {e}"
 
 
-# --- CORRECTED TOOL DEFINITION (v5) ---
-# The FunctionTool constructor only takes the function itself.
-# It automatically uses the function's name and docstring.
+# Wrap the functions into FunctionTool objects
+# This is confirmed correct by function_tool.py
 pdf_tool = FunctionTool(func=extract_pdf_text)
 latex_tool = FunctionTool(func=compile_latex_to_pdf)
-# ------------------------------------
 
 # Define a BaseAgent that includes the tools
 class AcademicAgent(BaseAgent):
@@ -80,7 +79,8 @@ class AcademicAgent(BaseAgent):
 app = FastAPI()
 
 # Mount the AcademicAgent to the app
-agents.mount_agent_to_app(AcademicAgent, app, path="/mcp")
+# This now calls the correctly imported function
+mount_agent_to_app(AcademicAgent, app, path="/mcp")
 
 # Main block to run the server
 if __name__ == "__main__":
